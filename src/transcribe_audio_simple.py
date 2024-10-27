@@ -1,5 +1,6 @@
 import os
 import whisper
+from correccion_contextual import aplicar_correcciones_advanced  # Importa la función de corrección contextual
 
 # Definir los directorios
 PROCESSED_AUDIO_DIR = 'data/processed/'
@@ -26,11 +27,14 @@ for audio_file in os.listdir(PROCESSED_AUDIO_DIR):
         print(f"Transcribiendo archivo de audio: {audio_file}")
         transcription = transcribe_audio(audio_path)
         
-        # Guardar la transcripción en un archivo de texto
+        # Aplicar corrección contextual a la transcripción
+        transcription_corregida = aplicar_correcciones_advanced(transcription)
+        
+        # Guardar la transcripción corregida en un archivo de texto
         transcription_filename = os.path.splitext(audio_file)[0] + '_transcription.txt'
         transcription_path = os.path.join(TRANSCRIPTIONS_DIR, transcription_filename)
         
         with open(transcription_path, 'w', encoding='utf-8') as f:
-            f.write(transcription)
+            f.write(transcription_corregida)
         
-        print(f'Transcripción guardada en: {transcription_path}')
+        print(f'Transcripción corregida guardada en: {transcription_path}')
