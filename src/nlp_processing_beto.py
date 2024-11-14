@@ -6,52 +6,58 @@ tokenizer = BertTokenizer.from_pretrained("./models/beto_finetuned")
 model = BertForMaskedLM.from_pretrained("./models/beto_finetuned")
 model.eval()  # Poner el modelo en modo evaluación
 
-# Función para identificar palabras potencialmente fuera de contexto (mejorada)
+# Función mejorada para identificar palabras potencialmente fuera de contexto
 def identify_words_to_mask(transcription):
-    # Tokenizar el texto para separar las palabras
+    # Tokenizar el texto usando un modelo de lenguaje para analizar la probabilidad de las palabras en contexto
+    tokens = tokenizer(transcription, return_tensors="pt")
+    with torch.no_grad():
+        outputs = model(**tokens)
+
+    # Calcular las probabilidades de cada token en el contexto
+    probabilities = torch.softmax(outputs.logits, dim=-1)
     words = transcription.split()
-    
-    # Heurística: Enmascarar palabras que podrían no encajar bien en el contexto
-    # (Esta es solo una estrategia básica y puede mejorarse con análisis estadístico)
     words_to_mask = []
+
     for i, word in enumerate(words):
-        # Excluir palabras muy comunes o artículos (mejorar con un análisis más avanzado)
+        # Excluir palabras comunes, pero usar las probabilidades del modelo para identificar rarezas
         if word.lower() not in ["el", "la", "los", "las", "y", "de", "en", "a"]:
-            words_to_mask.append((i, word))
-    
+            token_id = tokens["input_ids"][0, i].item()
+            token_prob = probabilities[0, i, token_id].item()
+            if token_prob < 0.1:  # Threshold: palabras con baja probabilidad son más sospechosas
+                words_to_mask.append((i, word))
+
     return words_to_mask
 
-# Función para corregir una transcripción usando enmascarado con BETO
+# Función mejorada para corregir una transcripción usando BETO con evaluación de similitud semántica
 def correct_transcription_with_beto(transcription):
-    # Identificar palabras para enmascarar
     words_to_mask = identify_words_to_mask(transcription)
     if not words_to_mask:
-        return transcription  # Si no se encuentran palabras para enmascarar, devolver el texto original
+        return transcription
 
     best_correction = transcription
+    highest_similarity = 0.0
 
-    # Probar enmascarar cada palabra identificada y evaluar la corrección
     for index, word_to_mask in words_to_mask:
         masked_text = transcription.replace(word_to_mask, "[MASK]", 1)
-        
-        # Tokenizar el texto con la palabra enmascarada
         inputs = tokenizer(masked_text, return_tensors="pt")
         with torch.no_grad():
             outputs = model(**inputs)
 
-        # Obtener las mejores predicciones para el token enmascarado
-        top_k = 5  # Considerar las 5 mejores predicciones
+        top_k = 5
         predictions = torch.topk(outputs.logits[0, index], top_k).indices.tolist()
 
-        # Evaluar las predicciones y seleccionar la mejor
         for predicted_token_id in predictions:
             predicted_word = tokenizer.decode([predicted_token_id]).strip()
             corrected_text = transcription.replace("[MASK]", predicted_word, 1)
-            
-            # Aquí podrías agregar una evaluación de qué tan bien encaja la corrección
-            # Por ahora, simplemente seleccionaremos la primera corrección válida
-            if corrected_text != transcription:
+
+            # Evaluar la similitud semántica entre la transcripción original y la corregida
+            similarity = torch.cosine_similarity(
+                torch.tensor(tokenizer.encode(transcription, return_tensors="pt")),
+                torch.tensor(tokenizer.encode(corrected_text, return_tensors="pt"))
+            ).item()
+
+            if similarity > highest_similarity:
                 best_correction = corrected_text
-                break
+                highest_similarity = similarity
 
     return best_correction
