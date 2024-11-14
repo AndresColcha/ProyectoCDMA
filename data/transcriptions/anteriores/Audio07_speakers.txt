@@ -1,0 +1,21 @@
+Speaker SPEAKER_01:  Gracias.
+Speaker SPEAKER_01:  Hola.
+Speaker SPEAKER_00:  Buenos días, Luis Sánchez, soporte técnico de Espilla Interna, les saluda con la cuenta de Navarrete Roque.
+Speaker SPEAKER_01:  Sí.
+Speaker SPEAKER_00:  El motivo de mi llamada es debido a que nos había informado que estaba presentando inconvenientes en el servicio.
+Speaker SPEAKER_01:  Sí, ya le he llamado muchas veces y sigue el mismo problema. Y quisiera cancelar el servicio. ¿Cómo sería para cancelar?
+Speaker SPEAKER_00:  Ya, en este caso de pronto nos podría ayudar recibiendo una visita técnica para ayudarle con la revisión de su servicio de manera presencial.
+Speaker SPEAKER_01:  ¿Pero de qué sirve si sigue lo mismo?
+Speaker SPEAKER_00:  Ya, de pronto en este caso que los técnicos se acerquen a su domicilio, tal vez es un inconveniente directamente con el equipo para que le ayuden revisando de manera física y le ayuden en este caso verificando, como le mencioné, de pronto es un inconveniente directamente con el equipo. De ser necesario se reemplaza el equipo para que pueda solucionar el inconveniente que usted ha venido presentando.
+Speaker SPEAKER_01:  Listo. ¿Para cuándo sería?
+Speaker SPEAKER_00:  Ya la visita técnica sería para el día de mañana. En este caso le ayudaría en este momento generando la orden de visita técnica. El día de mañana se acercarían a partir de las 8 y 30 a su domicilio para ayudarle verificando el inconveniente. Como le menciono, si de pronto es un inconveniente directamente con los equipos, el técnico verificará de manera física si es necesario cambiar el equipo para evitar o solventar el inconveniente que ha venido usted presentando.
+Speaker SPEAKER_01:  Listo, entonces mañana lo espero.
+Speaker SPEAKER_00:  Ya, ayúdeme confirmando la dirección de su domicilio para en este momento ayudarle generando la visita técnica, por favor. Me dice que es de la avenida Panamericana Norte, frente a la capilla Corazón de Jesús, ¿verdad?
+Speaker SPEAKER_01:  Sí.
+Speaker SPEAKER_00:  Ya, de pronto me podría ayudar con un número de contacto adicional.
+Speaker SPEAKER_01:  No, solo esa no más tengo. Me pueden llamar en cualquier momento.
+Speaker SPEAKER_00:  Ya no se preocupe, en todo caso que esté pendiente a la llamada, este mismo número de contacto, el técnico estaría comunicando con usted unos minutos antes de acercarse a su domicilio.
+Speaker SPEAKER_01:  Listo, está bien.
+Speaker SPEAKER_00:  Recuerde que se comunicó con Luis Sánchez, soporte técnico de Despide Internet. Que tenga un buen día.
+Speaker SPEAKER_01:  Gracias.
+Speaker SPEAKER_01:  Igualmente.

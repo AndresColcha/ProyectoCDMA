@@ -69,14 +69,11 @@ def preprocess_audio(file_path, target_sample_rate=16000):
 
 def save_processed_audio(audio, sample_rate, output_path):
     """
-    Guarda el archivo de audio procesado en formato FLAC.
+    Guarda el archivo de audio procesado en formato WAV.
     """
-    # Cambiar la extensión a .flac
-    output_path = output_path.replace('.wav', '.flac')
-
-    # Guardar el archivo en formato FLAC (compresión sin pérdida)
-    sf.write(output_path, audio, sample_rate, format='FLAC')
-    print(f"Archivo guardado en formato FLAC: {output_path}")
+    # Guardar el archivo en formato WAV
+    sf.write(output_path, audio, sample_rate, format='WAV')
+    print(f"Archivo guardado en formato WAV: {output_path}")
 
 def process_all_audios():
     """
@@ -90,7 +87,7 @@ def process_all_audios():
             # Preprocesar el audio
             audio, sample_rate = preprocess_audio(raw_file_path)
             
-            # Guardar el audio preprocesado en formato FLAC
+            # Guardar el audio preprocesado en formato WAV
             save_processed_audio(audio, sample_rate, processed_file_path)
             print(f"Procesado: {file_name}")
 

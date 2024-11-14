@@ -1,0 +1,5 @@
+SPEAKER_01:  Buenos días.
+SPEAKER_00:  Buenos días, les saluda Estefanía Flores de Speedy Internet, que me comunicó la cuenta de internet a nombre de Diana Margarita Vaca. La llamada es por hacer una breve encuesta y comentar la instalación de internet del día de hoy. Tal vez usted me pueda ayudar.
+SPEAKER_01:  No, porque no estoy en el lugar.
+SPEAKER_00:  Tal vez la señora Diana estuvo para recibir al técnico el día de hoy. Sí. Listo. Muchísimas gracias. Muy amable por la información. Gracias. Hasta luego.
+SPEAKER_01:  Gracias.
