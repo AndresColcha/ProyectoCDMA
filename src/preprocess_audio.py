@@ -9,6 +9,16 @@ import tempfile  # Para manejar archivos temporales
 RAW_AUDIO_DIR = 'data/raw/'
 PROCESSED_AUDIO_DIR = 'data/processed/'
 
+def convert_to_wav(input_path):
+    """
+    Convierte un archivo de audio (MP3 o cualquier formato soportado por pydub) a WAV.
+    """
+    audio = AudioSegment.from_file(input_path)
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+        temp_path = temp_file.name
+        audio.export(temp_path, format="wav")
+    return temp_path
+
 def remove_silence(audio, sample_rate, silence_thresh=-40, min_silence_len=500):
     """
     Elimina los silencios largos del audio.
@@ -59,6 +69,10 @@ def preprocess_audio(file_path, target_sample_rate=16000):
     """
     Carga y preprocesa el audio, asegurando que tenga la frecuencia de muestreo adecuada.
     """
+    # Convertir a WAV si no es un archivo WAV
+    if not file_path.endswith(".wav"):
+        file_path = convert_to_wav(file_path)
+    
     # Cargar el audio
     audio, sample_rate = librosa.load(file_path, sr=target_sample_rate)
     
@@ -80,9 +94,9 @@ def process_all_audios():
     Procesa todos los audios en el directorio RAW y guarda los procesados.
     """
     for file_name in os.listdir(RAW_AUDIO_DIR):
-        if file_name.endswith(".wav"):
+        if file_name.endswith((".wav", ".mp3", ".mpeg")):  # Admitir múltiples formatos
             raw_file_path = os.path.join(RAW_AUDIO_DIR, file_name)
-            processed_file_path = os.path.join(PROCESSED_AUDIO_DIR, file_name)
+            processed_file_path = os.path.join(PROCESSED_AUDIO_DIR, os.path.splitext(file_name)[0] + ".wav")
             
             # Preprocesar el audio
             audio, sample_rate = preprocess_audio(raw_file_path)

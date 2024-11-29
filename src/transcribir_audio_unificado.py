@@ -14,7 +14,7 @@ EVOLUTION_CSV_PATH = 'data/transcriptions/evolution.csv'
 os.makedirs(os.path.dirname(TRANSCRIPTIONS_CSV_PATH), exist_ok=True)
 
 # Cargar el modelo Whisper large
-model = whisper.load_model("large")
+model = whisper.load_model("small")
 
 # Cargar el pipeline de diarización de pyannote-audio
 pipeline = Pipeline.from_pretrained(
