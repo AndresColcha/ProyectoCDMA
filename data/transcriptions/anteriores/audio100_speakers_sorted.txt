@@ -1,7 +1,0 @@
-SPEAKER_01:  Aló, buenas tardes. Buenas tardes, les saluda Estefanía Flores de Speedy Internet. Me comunicó la cuenta de Internet a nombre de Claudio Benalcázar. Sí, dígame.
-SPEAKER_00:  Aló, buenas tardes.
- Ella me está hablando con el... Lo que pasa es que es del conjunto el Internet.
-SPEAKER_01:  Ah, correcto. La llamada es por verificar la visita de internet que se realizó el fin de semana anterior. ¿Tal vez usted me puede ayudar? No, muy bien.
-SPEAKER_00:  Muy bien, muy bien, gracias, muy amable, todo fue un éxito.
-SPEAKER_01:  Ah, ya listo, correcto. ¿Me puede ayudar con su nombre, por favor? Raúl Jacome. Muchas gracias, señor Raúl, por cualquier novedad o por cualquier inquietud. Nos comunica, por favor, para poder ayudarle así. Ya, muy amable. Que tenga una buena tarde. Hasta luego. Gracias. Hasta luego.
-SPEAKER_00: 
