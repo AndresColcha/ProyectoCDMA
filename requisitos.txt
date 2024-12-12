@@ -9,3 +9,5 @@ pydub
 pyannote.audio
 fastapi
 uvicorn
+transformers[torch]
+num2words

@@ -31,8 +31,8 @@ class TranscriptionCorrectionDataset(Dataset):
         return {k: v.squeeze() for k, v in inputs.items()}
 
 # Preparar el dataset para el entrenamiento
-transcriptions = dataset["Transcripción Errónea"].tolist()
-corrections = dataset["Corrección Deseada"].tolist()
+transcriptions = dataset["transcripcion_erronea"].tolist()
+corrections = dataset["correccion_deseada"].tolist()
 train_dataset = TranscriptionCorrectionDataset(transcriptions, corrections)
 
 # Configurar los argumentos de entrenamiento
