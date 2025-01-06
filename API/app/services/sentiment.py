@@ -37,36 +37,89 @@ def normalize_text(text):
     text = re.sub(r'[^a-zA-Z\s]', '', text)
     return text.lower()  # Convertir a minúsculas
 
-# Función para analizar el sentimiento
+# Función para dividir el texto en fragmentos manejables
+def chunk_text(text, tokenizer, max_length=512):
+    """
+    Divide un texto largo en fragmentos de tamaño máximo `max_length` tokens.
+    """
+    tokens = tokenizer.tokenize(text)
+    chunks = [
+        tokens[i:i + max_length]
+        for i in range(0, len(tokens), max_length)
+    ]
+    return [tokenizer.convert_tokens_to_string(chunk) for chunk in chunks]
+
+# Función para analizar el sentimiento en textos largos
+def analyze_long_text(transcription_pure, tokenizer, model, max_length=512):
+    """
+    Analiza un texto largo dividiéndolo en fragmentos y combinando los resultados.
+
+    :param transcription_pure: Texto de la transcripción pura.
+    :param tokenizer: Tokenizador del modelo.
+    :param model: Modelo de análisis de sentimientos.
+    :param max_length: Longitud máxima de tokens por fragmento.
+    :return: Tupla (Sentimiento final, Sentimientos por fragmento).
+    """
+    # Normalizar el texto
+    normalized_text = normalize_text(transcription_pure)
+    
+    # Dividir en fragmentos
+    chunks = chunk_text(normalized_text, tokenizer, max_length)
+    
+    # Analizar cada fragmento
+    sentiments = []
+    for chunk in chunks:
+        inputs = tokenizer(chunk, return_tensors="pt", truncation=True, padding=True, max_length=max_length)
+        with torch.no_grad():
+            outputs = model(**inputs)
+        logits = outputs.logits
+        predicted_class = torch.argmax(logits, dim=1).item()
+
+        # Mapear sentimiento
+        if predicted_class in [0, 1]:
+            sentiments.append("Frustración")
+        elif predicted_class == 2:
+            sentiments.append("Neutral")
+        else:
+            sentiments.append("Satisfacción")
+
+    # Combinar resultados (mayor frecuencia)
+    final_sentiment = max(set(sentiments), key=sentiments.count)
+    return final_sentiment, sentiments
+
+# Adaptar la función principal para mantener compatibilidad
 def analyze_sentiment(transcription_pure):
     """
     Analiza el sentimiento basado en la transcripción.
 
     :param transcription_pure: Texto de la transcripción pura.
-    :return: Sentimiento (Frustración, Neutral, Satisfacción).
+    :return: Tupla (Sentimiento, Texto Normalizado).
     """
-    # Normalizar el texto
+    # Reutilizar la función para textos largos
+    final_sentiment, _ = analyze_long_text(transcription_pure, tokenizer, model)
     normalized_text = normalize_text(transcription_pure)
-    
-    # Preprocesar el texto y preparar los datos para el modelo
-    inputs = tokenizer(
-        normalized_text, 
-        return_tensors="pt", 
-        truncation=True, 
-        padding=True, 
-        max_length=512
-    )
-    with torch.no_grad():
-        outputs = model(**inputs)
-    logits = outputs.logits
-    predicted_class = torch.argmax(logits, dim=1).item()
-    
-    # Mapeo de la clase predicha a sentimiento
-    if predicted_class in [0, 1]:  # Clases de sentimiento muy negativo y negativo
-        sentiment = "Frustración"
-    elif predicted_class == 2:  # Clase de sentimiento neutral
-        sentiment = "Neutral"
-    else:  # Clases de sentimiento positivo y muy positivo
-        sentiment = "Satisfacción"
+    return final_sentiment, normalized_text
 
-    return sentiment
+# Ejemplo de uso
+if __name__ == "__main__":
+    text = "Aquí va un texto extremadamente largo que excede el límite de tokens..."
+    final_sentiment, normalized_text = analyze_sentiment(text)
+    print(f"Sentimiento final: {final_sentiment}")
+    print(f"Texto normalizado: {normalized_text}")
+
+
+    """
+    def detect_categories(text):
+    categories_df = pd.read_csv("data/categorization/categories.csv")
+    categories = {
+        row["Categoría"]: row["Palabras clave y frases"].split(", ")
+        for _, row in categories_df.iterrows()
+    }
+    detected = [category for category, keywords in categories.items() if any(k in text for k in keywords)]
+    return detected or ["Sin clasificación"]
+
+    """
+    
+
+
+

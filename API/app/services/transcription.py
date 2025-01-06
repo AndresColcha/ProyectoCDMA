@@ -1,22 +1,16 @@
 import os
 from datetime import datetime
 import pandas as pd
-from app.services.preprocess_audio import preprocess_audio
-from app.services.correction import correct_transcription_with_beto
+from pydub import AudioSegment
+import ray
+from app.services.preprocess_audio import preprocess_audio, save_processed_audio
+from app.services.correction import correct_transcription
 from app.services.sentiment import analyze_sentiment
-import whisper
-from pyannote.audio import Pipeline
-import shutil
+from app.core.actor import whisper_actor  # Importar el actor
 
 # Rutas de datos
 HISTORY_FILE = "./data/transcriptions/history.csv"
-
-# Cargar el modelo Whisper y el pipeline de diarización
-model = whisper.load_model("large")
-pipeline = Pipeline.from_pretrained(
-    "pyannote/speaker-diarization",
-    use_auth_token="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"
-)
+PROCESSED_AUDIO_DIR = "./data/processed/"
 
 # Asegurarse de que el archivo histórico existe
 os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
@@ -25,6 +19,28 @@ if not os.path.exists(HISTORY_FILE):
         "nombre_archivo", "fecha_transcripcion", "transcripcion_pura",
         "transcripcion_corregida", "transcripcion_ordenada", "sentimiento"
     ]).to_csv(HISTORY_FILE, index=False)
+
+@ray.remote
+def transcribe_segment(actor, audio_path, start_time, end_time, base_name):
+    """
+    Transcribe un segmento de audio específico entre start_time y end_time.
+    """
+    try:
+        temp_path = f"{os.path.splitext(base_name)[0]}_segment_{start_time}_{end_time}.wav"  # Nombre único para el archivo temporal
+        segment = AudioSegment.from_file(audio_path, format="wav")[start_time * 1000:end_time * 1000]
+
+        # Exportar segmento a archivo temporal
+        if len(segment) > 0:
+            segment.export(temp_path, format="wav")
+        else:
+            raise ValueError(f"El segmento entre {start_time} y {end_time} está vacío.")
+
+        # Transcribir el segmento utilizando el actor
+        result = ray.get(actor.transcribe.remote(temp_path))
+        os.remove(temp_path)  # Eliminar archivo temporal después de usarlo
+        return result["text"]
+    except Exception as e:
+        raise RuntimeError(f"Error al transcribir el segmento {start_time}-{end_time}: {str(e)}")
 
 def save_to_history(data):
     """
@@ -36,7 +52,7 @@ def save_to_history(data):
         else:
             existing_df = pd.DataFrame(columns=[
                 "nombre_archivo", "fecha_transcripcion", "transcripcion_pura",
-                "transcripcion_corregida", "transcripcion_ordenada", "sentimiento"
+                "transcripcion_corregida", "texto_normalizado", "sentimiento"
             ])
         
         new_entry = pd.DataFrame([data])
@@ -46,47 +62,49 @@ def save_to_history(data):
     except Exception as e:
         print(f"Error al guardar en el histórico: {e}")
 
-def transcribe_segment(audio_path, start_time, end_time):
+def transcribe_audio_in_parallel(processed_file_path, base_name, segment_duration=30):
     """
-    Transcribe un segmento de audio específico entre start_time y end_time.
+    Divide y transcribe un archivo de audio en paralelo usando Ray.
     """
-    from pydub import AudioSegment
-    temp_path = "temp_segment_audio.wav"
-    segment = AudioSegment.from_file(audio_path, format="wav")[start_time * 1000:end_time * 1000]
-    segment.export(temp_path, format="wav")
-    result = model.transcribe(temp_path, language="es")
-    os.remove(temp_path)
-    return result["text"]
+    audio = AudioSegment.from_file(processed_file_path)
+    total_duration = len(audio) // 1000  # Duración total en segundos
+
+    # Crear tareas para cada segmento
+    tasks = [
+        transcribe_segment.remote(whisper_actor, processed_file_path, start, min(start + segment_duration, total_duration), base_name)
+        for start in range(0, total_duration, segment_duration)
+    ]
+
+    # Ejecutar tareas en paralelo y esperar los resultados
+    transcriptions = ray.get(tasks)
+
+    # Unir las transcripciones
+    complete_transcription = " ".join(transcriptions)
+    return complete_transcription
 
 def process_and_store_transcription(file_path, file_name):
     """
-    Procesa un archivo de audio desde `data/raw`, realiza diarización, transcribe, corrige y analiza el sentimiento.
+    Procesa un archivo de audio desde `data/raw`, realiza transcripción, corrige y analiza el sentimiento.
     """
     try:
         # Preprocesar el audio
-        processed_audio, _ = preprocess_audio(file_path)
+        processed_audio, sample_rate = preprocess_audio(file_path)
 
-        # Diarización
-        diarization = pipeline(file_path)
-        speakers_sorted_text = []
-        pure_transcriptions = []
-        last_speaker = None
+        # Ruta para guardar el archivo procesado
+        processed_file_path = os.path.join(PROCESSED_AUDIO_DIR, file_name)
+        os.makedirs(os.path.dirname(processed_file_path), exist_ok=True)
 
-        for turn, _, speaker in diarization.itertracks(yield_label=True):
-            segment_transcription = transcribe_segment(file_path, turn.start, turn.end)
-            if speaker != last_speaker:
-                speakers_sorted_text.append(f"{speaker}: ")
-                last_speaker = speaker
-            speakers_sorted_text.append(f"{segment_transcription}\n")
-            pure_transcriptions.append(segment_transcription)
+        # Guardar el archivo procesado
+        save_processed_audio(processed_audio, sample_rate, processed_file_path)
 
-        # Crear las transcripciones
-        transcription_pure = " ".join(pure_transcriptions)
-        transcription_ordered = "".join(speakers_sorted_text)
+        # Transcribir el audio completo en paralelo
+        transcription_pure = transcribe_audio_in_parallel(processed_file_path, file_name)
 
-        # Corrección y análisis de sentimiento
-        transcription_corrected = correct_transcription_with_beto(transcription_pure)
-        sentiment = analyze_sentiment(transcription_corrected)
+        # Corrección utilizando el actor de BETO a través de correction.py
+        transcription_corrected = correct_transcription(transcription_pure)
+
+        # Análisis de sentimiento y normalización
+        sentiment, normalized_text = analyze_sentiment(transcription_corrected)
 
         # Preparar datos para guardar
         transcription_data = {
@@ -94,11 +112,17 @@ def process_and_store_transcription(file_path, file_name):
             "fecha_transcripcion": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "transcripcion_pura": transcription_pure,
             "transcripcion_corregida": transcription_corrected,
-            "transcripcion_ordenada": transcription_ordered,
+            "texto_normalizado": normalized_text,
             "sentimiento": sentiment
         }
-        shutil.rmtree('./data/raw')
+
+        # Guardar en el historial
         save_to_history(transcription_data)
+
         return transcription_data
     except Exception as e:
         raise RuntimeError(f"Error procesando el archivo {file_name}: {str(e)}")
+
+if __name__ == "__main__":
+    os.makedirs(PROCESSED_AUDIO_DIR, exist_ok=True)
+    print("Listo para procesar y transcribir audios usando Ray.")
