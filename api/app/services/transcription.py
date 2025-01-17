@@ -62,9 +62,11 @@ def save_to_history(data):
     except Exception as e:
         print(f"Error al guardar en el histórico: {e}")
 
-def transcribe_audio_in_parallel(processed_file_path, base_name, segment_duration=30):
+import asyncio
+
+async def transcribe_audio_in_parallel(processed_file_path, base_name, segment_duration=10):
     """
-    Divide y transcribe un archivo de audio en paralelo usando Ray.
+    Divide y transcribe un archivo de audio en paralelo usando Ray de forma asíncrona.
     """
     audio = AudioSegment.from_file(processed_file_path)
     total_duration = len(audio) // 1000  # Duración total en segundos
@@ -75,16 +77,18 @@ def transcribe_audio_in_parallel(processed_file_path, base_name, segment_duratio
         for start in range(0, total_duration, segment_duration)
     ]
 
-    # Ejecutar tareas en paralelo y esperar los resultados
-    transcriptions = ray.get(tasks)
+    # Ejecutar las tareas en paralelo y esperar los resultados usando asyncio.to_thread
+    transcriptions = await asyncio.gather(*[asyncio.to_thread(ray.get, task) for task in tasks])
 
     # Unir las transcripciones
     complete_transcription = " ".join(transcriptions)
     return complete_transcription
 
-def process_and_store_transcription(file_path, file_name):
+
+async def process_and_store_transcription(file_path, file_name):
     """
-    Procesa un archivo de audio desde `data/raw`, realiza transcripción, corrige y analiza el sentimiento.
+    Procesa un archivo de audio desde `data/raw`, realiza transcripción, corrige y analiza el sentimiento,
+    y elimina los archivos temporales una vez finalizado el procesamiento.
     """
     try:
         # Preprocesar el audio
@@ -98,9 +102,9 @@ def process_and_store_transcription(file_path, file_name):
         save_processed_audio(processed_audio, sample_rate, processed_file_path)
 
         # Transcribir el audio completo en paralelo
-        transcription_pure = transcribe_audio_in_parallel(processed_file_path, file_name)
+        transcription_pure = await transcribe_audio_in_parallel(processed_file_path, file_name)
 
-        # Corrección utilizando el actor de BETO a través de correction.py
+        # Corrección utilizando el actor de BETO
         transcription_corrected = correct_transcription(transcription_pure)
 
         # Análisis de sentimiento y normalización
@@ -119,9 +123,21 @@ def process_and_store_transcription(file_path, file_name):
         # Guardar en el historial
         save_to_history(transcription_data)
 
+        # Eliminar archivos temporales (crudo y procesado)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        if os.path.exists(processed_file_path):
+            os.remove(processed_file_path)
+
         return transcription_data
     except Exception as e:
+        # Si ocurre un error, asegúrate de limpiar también los archivos temporales
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        if os.path.exists(processed_file_path):
+            os.remove(processed_file_path)
         raise RuntimeError(f"Error procesando el archivo {file_name}: {str(e)}")
+
 
 if __name__ == "__main__":
     os.makedirs(PROCESSED_AUDIO_DIR, exist_ok=True)

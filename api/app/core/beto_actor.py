@@ -97,6 +97,3 @@ class BetoActor:
                         words_to_mask.append((i, word))
 
         return words_to_mask
-
-# Inicializar el actor global
-beto_actor = BetoActor.remote()
